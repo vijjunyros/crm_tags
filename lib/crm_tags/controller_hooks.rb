@@ -29,21 +29,22 @@ class ControllerHooks < FatFreeCRM::Callback::Base
     define_method :"get_#{klass.to_s.tableize}" do |controller, context|
       session, params, search_string = controller.session, controller.params, controller.send(:current_query)
       query, tags = parse_query_and_tags(search_string)
-      filter = :"filter_by_#{klass.to_s.downcase.singularize}_status"
+      suffix = klass == Opportunity ? "stage" : "status"
+      filter = :"filter_by_#{klass.to_s.downcase.singularize}_#{suffix}"
 
       if session[filter]                                                # With filters...
         filtered = session[filter].split(",")
         if tags.blank?                                                  # With filters, no tags...
           if query.blank?                                               # With filters, no tags, no search query.
-            klass.my(context[:records]).only(filtered)
+            klass.my(context[:records]).state(filtered)
           else                                                          # With filters, no tags, with search query.
-            klass.my(context[:records]).only(filtered).search(query)
+            klass.my(context[:records]).state(filtered).search(query)
           end
         else                                                            # With filters, with tags...
           if query.blank?                                               # With filters, with tags, no search query.
-            klass.my(context[:records]).only(filtered).tagged_with(tags, :on => :tags)
+            klass.my(context[:records]).state(filtered).tagged_with(tags, :on => :tags)
           else                                                          # With filters, with tags, with search query.
-            klass.my(context[:records]).only(filtered).search(query).tagged_with(tags, :on => :tags)
+            klass.my(context[:records]).state(filtered).search(query).tagged_with(tags, :on => :tags)
           end
         end
       else                                                              # No filters...
@@ -53,14 +54,14 @@ class ControllerHooks < FatFreeCRM::Callback::Base
           else                                                          # No filters, no tags, with search query.
             klass.my(context[:records]).search(query)
           end
-        else                                                            # No filters, with tags...  
+        else                                                            # No filters, with tags...
           if query.blank?                                               # No filters, with tags, no search query.
             klass.my(context[:records]).tagged_with(tags, :on => :tags)
           else                                                          # No filters, with tags, with search query.
             klass.my(context[:records]).search(query).tagged_with(tags, :on => :tags)
           end
         end
-      end.paginate(context[:pages])   
+      end.paginate(context[:pages])
     end # define_method
   end # each
 
